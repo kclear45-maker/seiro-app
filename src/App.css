@@ -28,14 +28,7 @@
   background-position: center top;
   background-size: 100% 100%;
   color: #402a12;
-  font-family:
-    'Hiragino Mincho ProN',
-    'Hiragino Mincho Pro',
-    'Yu Mincho',
-    'YuMincho',
-    'MS PMincho',
-    'MS Mincho',
-    serif;
+  font-family: 'Zen Old Mincho', serif;
 }
 
 .star-tabs {
@@ -160,13 +153,35 @@
   box-shadow: 0 2px 10px rgba(60, 40, 80, 0.06);
 }
 
+.waypoint-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .waypoint-card__title {
-  margin: 0 0 8px;
+  margin: 0;
   color: #402a12;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-align: center;
+}
+
+.waypoint-card__add {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #402a12;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .waypoint-list {
@@ -434,14 +449,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   padding: 28px 20px 16px;
-  font-family:
-    'Hiragino Mincho ProN',
-    'Hiragino Mincho Pro',
-    'Yu Mincho',
-    'YuMincho',
-    'MS PMincho',
-    'MS Mincho',
-    serif;
+  font-family: 'Zen Old Mincho', serif;
 }
 
 .recent-plans-screen,
@@ -624,7 +632,7 @@
 }
 
 .waypoint-modal {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 20;
   display: flex;
@@ -651,14 +659,7 @@
   border-radius: 18px;
   background: #ffffff;
   color: #402a12;
-  font-family:
-    'Hiragino Mincho ProN',
-    'Hiragino Mincho Pro',
-    'Yu Mincho',
-    'YuMincho',
-    'MS PMincho',
-    'MS Mincho',
-    serif;
+  font-family: 'Zen Old Mincho', serif;
 }
 
 .waypoint-modal__header {

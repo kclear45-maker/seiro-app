@@ -375,8 +375,12 @@ function RegisterIdealFlow({
             onClick={closeWaypointModal}
           />
           <div className="waypoint-modal__panel" role="dialog" aria-modal="true">
-            <div className="waypoint-modal__header">
-              <h2 className="waypoint-modal__title">経由地を登録する</h2>
+            <div className="waypoint-modal__header waypoint-modal__header--centered">
+              <h2
+                className="waypoint-modal__title waypoint-modal__title--center"
+              >
+                経由地を登録する
+              </h2>
               <button
                 type="button"
                 className="waypoint-modal__close"

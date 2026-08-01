@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import './App.css'
-import HomeScreen, { type AppScreen } from './HomeScreen'
+import HomeScreen, {
+  getInitialSelectedIdealId,
+  type AppScreen,
+} from './HomeScreen'
 import RegisterIdealFlow from './RegisterIdealFlow'
 import { RecentPlansScreen, ReviewPlansScreen } from './screens'
 import PlanRegisterModal, { type PlanModalMode } from './PlanRegisterModal'
@@ -10,12 +13,16 @@ import type { AppData, Plan } from './types'
 function App() {
   const [screen, setScreen] = useState<AppScreen>('home')
   const [appData, setAppData] = useState<AppData>(() => loadAppData())
+  const [selectedIdealId, setSelectedIdealId] = useState<string | null>(() =>
+    getInitialSelectedIdealId(loadAppData().ideals),
+  )
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
   const [planModalMode, setPlanModalMode] = useState<PlanModalMode>('create')
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
 
   function handleIdealRegistered(nextData: AppData) {
     setAppData(nextData)
+    setSelectedIdealId(getInitialSelectedIdealId(nextData.ideals))
     setScreen('home')
   }
 
@@ -50,6 +57,8 @@ function App() {
             ideals={appData.ideals}
             waypoints={appData.waypoints}
             plans={appData.plans}
+            selectedIdealId={selectedIdealId}
+            onSelectedIdealIdChange={setSelectedIdealId}
             onAppDataChange={setAppData}
             onOpenPlanModal={openCreatePlanModal}
           />

@@ -13,7 +13,7 @@ import pinkStar from '../material/pink_star.png'
 import mintStar from '../material/mint_star.png'
 import footprints from '../material/footprints.svg'
 import miniStar from '../material/mini_star.svg'
-import { MAX_IDEAL_NAME_LENGTH, MAX_WAYPOINT_NAME_LENGTH } from './constants'
+import { MAX_IDEAL_NAME_LENGTH, MAX_WAYPOINT_NAME_LENGTH, MAX_WAYPOINTS_PER_IDEAL } from './constants'
 import { loadAppData, saveAppData } from './storage'
 import type { AppData, Ideal, IdealColor, Plan, Waypoint } from './types'
 
@@ -24,6 +24,8 @@ type HomeScreenProps = {
   ideals: Ideal[]
   waypoints: Waypoint[]
   plans: Plan[]
+  selectedIdealId: string | null
+  onSelectedIdealIdChange: (idealId: string | null) => void
   onAppDataChange: (data: AppData) => void
   onOpenPlanModal: () => void
 }
@@ -36,6 +38,13 @@ const DELETE_IDEAL_MESSAGE_LINE1 = 'この理想を削除しますか？'
 const DELETE_IDEAL_MESSAGE_LINE2 =
   '関連する経由地と予定も削除されます。'
 const DELETE_WAYPOINT_MESSAGE = 'この経由地を削除しますか？'
+
+function createId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
 
 const brightStarByColor: Record<IdealColor, string> = {
   yellow: yellowBrightStar,
@@ -126,19 +135,20 @@ function getInitialSelectedIdealId(ideals: Ideal[]): string | null {
   return tabIdeals[tabIdeals.length - 1].id
 }
 
+export { getInitialSelectedIdealId }
+
 function HomeScreen({
   onNavigate,
   ideals,
   waypoints,
   plans,
+  selectedIdealId,
+  onSelectedIdealIdChange,
   onAppDataChange,
   onOpenPlanModal,
 }: HomeScreenProps) {
   const tabIdeals = ideals.slice(0, MAX_STAR_TABS)
 
-  const [selectedIdealId, setSelectedIdealId] = useState<string | null>(() =>
-    getInitialSelectedIdealId(ideals),
-  )
   const [isMaxIdealsModalOpen, setIsMaxIdealsModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -148,6 +158,9 @@ function HomeScreen({
 
   const [editingWaypoint, setEditingWaypoint] = useState<Waypoint | null>(null)
   const [isWaypointEditOpen, setIsWaypointEditOpen] = useState(false)
+  const [isWaypointAddOpen, setIsWaypointAddOpen] = useState(false)
+  const [waypointAddName, setWaypointAddName] = useState('')
+  const [waypointAddYearMonth, setWaypointAddYearMonth] = useState('')
   const [isWaypointDeleteConfirmOpen, setIsWaypointDeleteConfirmOpen] =
     useState(false)
   const [isWaypointAchievedOpen, setIsWaypointAchievedOpen] = useState(false)
@@ -255,7 +268,7 @@ function HomeScreen({
     onAppDataChange(nextData)
 
     const nextTabs = nextData.ideals.slice(0, MAX_STAR_TABS)
-    setSelectedIdealId(
+    onSelectedIdealIdChange(
       nextTabs.length === 0 ? null : nextTabs[nextTabs.length - 1].id,
     )
     closeEditModal()
@@ -269,6 +282,67 @@ function HomeScreen({
     setIsWaypointDeleteConfirmOpen(false)
     setIsWaypointAchievedOpen(false)
     setIsWaypointEditOpen(true)
+  }
+
+  function openWaypointAddModal() {
+    if (selectedIdeal === null) {
+      return
+    }
+    if (selectedWaypoints.length >= MAX_WAYPOINTS_PER_IDEAL) {
+      return
+    }
+    setWaypointAddName('')
+    setWaypointAddYearMonth('')
+    setIsWaypointAddOpen(true)
+  }
+
+  function closeWaypointAddModal() {
+    setIsWaypointAddOpen(false)
+    setWaypointAddName('')
+    setWaypointAddYearMonth('')
+  }
+
+  function handleAddWaypoint() {
+    if (selectedIdeal === null) {
+      return
+    }
+    if (selectedWaypoints.length >= MAX_WAYPOINTS_PER_IDEAL) {
+      return
+    }
+
+    const name = waypointAddName.trim().slice(0, MAX_WAYPOINT_NAME_LENGTH)
+    if (name.length === 0) {
+      return
+    }
+
+    const currentData = loadAppData()
+    const idealWaypoints = currentData.waypoints.filter(
+      (waypoint) => waypoint.idealId === selectedIdeal.id,
+    )
+    const nextOrder =
+      idealWaypoints.length === 0
+        ? 0
+        : Math.max(...idealWaypoints.map((waypoint) => waypoint.order)) + 1
+
+    const nextWaypoint: Waypoint = {
+      id: createId(),
+      idealId: selectedIdeal.id,
+      name,
+      targetYearMonth:
+        waypointAddYearMonth === '' ? null : waypointAddYearMonth,
+      isAchieved: false,
+      order: nextOrder,
+      createdAt: new Date().toISOString(),
+    }
+
+    const nextData: AppData = {
+      ...currentData,
+      waypoints: [...currentData.waypoints, nextWaypoint],
+    }
+
+    saveAppData(nextData)
+    onAppDataChange(nextData)
+    closeWaypointAddModal()
   }
 
   function closeWaypointEditModal() {
@@ -361,7 +435,7 @@ function HomeScreen({
                   role="tab"
                   aria-selected={isSelected}
                   className="star-tabs__button"
-                  onClick={() => setSelectedIdealId(ideal.id)}
+                  onClick={() => onSelectedIdealIdChange(ideal.id)}
                 >
                   <img
                     className={
@@ -404,7 +478,19 @@ function HomeScreen({
               </button>
 
               <div className="waypoint-card">
-                <h2 className="waypoint-card__title">経由地</h2>
+                <div className="waypoint-card__header">
+                  <h2 className="waypoint-card__title">経由地</h2>
+                  {selectedWaypoints.length < MAX_WAYPOINTS_PER_IDEAL && (
+                    <button
+                      type="button"
+                      className="waypoint-card__add"
+                      aria-label="経由地を追加"
+                      onClick={openWaypointAddModal}
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
                 <ul
                   className={`waypoint-list waypoint-list--${selectedIdeal.color}`}
                 >
@@ -709,6 +795,84 @@ function HomeScreen({
                 削除する
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isWaypointAddOpen && selectedIdeal !== null && (
+        <div className="waypoint-modal">
+          <button
+            type="button"
+            className="waypoint-modal__backdrop"
+            aria-label="閉じる"
+            onClick={closeWaypointAddModal}
+          />
+          <div
+            className="waypoint-modal__panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="waypoint-add-title"
+          >
+            <div className="waypoint-modal__header waypoint-modal__header--centered">
+              <h2
+                id="waypoint-add-title"
+                className="waypoint-modal__title waypoint-modal__title--center"
+              >
+                経由地を追加
+              </h2>
+              <button
+                type="button"
+                className="waypoint-modal__close"
+                aria-label="閉じる"
+                onClick={closeWaypointAddModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <input
+              className="waypoint-modal__input"
+              type="text"
+              value={waypointAddName}
+              maxLength={MAX_WAYPOINT_NAME_LENGTH}
+              placeholder="経由地名"
+              onChange={(event) => {
+                setWaypointAddName(
+                  event.target.value.slice(0, MAX_WAYPOINT_NAME_LENGTH),
+                )
+              }}
+            />
+
+            <label className="waypoint-modal__month">
+              <input
+                type="month"
+                value={waypointAddYearMonth}
+                onChange={(event) =>
+                  setWaypointAddYearMonth(event.target.value)
+                }
+                onClick={(event) => {
+                  const input = event.currentTarget
+                  try {
+                    input.showPicker()
+                  } catch {
+                    // showPicker 非対応ブラウザでは通常のフォーカス動作に任せる
+                  }
+                }}
+              />
+              <span className="waypoint-modal__month-label">
+                {waypointAddYearMonth === ''
+                  ? 'いつ頃達成したいか（任意）'
+                  : formatYearMonthLabel(waypointAddYearMonth)}
+              </span>
+            </label>
+
+            <button
+              type="button"
+              className="waypoint-modal__save"
+              onClick={handleAddWaypoint}
+            >
+              保存
+            </button>
           </div>
         </div>
       )}
