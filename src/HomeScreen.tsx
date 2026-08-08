@@ -170,6 +170,8 @@ function HomeScreen({
   const [achievedWaypointName, setAchievedWaypointName] = useState('')
   const [achievedWaypointColor, setAchievedWaypointColor] =
     useState<IdealColor>('yellow')
+  const [isCompletedPlansModalOpen, setIsCompletedPlansModalOpen] =
+    useState(false)
 
   const selectedIdeal =
     tabIdeals.find((ideal) => ideal.id === selectedIdealId) ??
@@ -184,13 +186,26 @@ function HomeScreen({
           .slice()
           .sort(compareWaypointsByDate)
 
-  const completedPlanCount =
+  const completedPlansForSelectedIdeal =
     selectedIdeal === null
-      ? 0
+      ? []
       : plans.filter(
           (plan) =>
             plan.idealId === selectedIdeal.id && plan.status === 'completed',
-        ).length
+        )
+
+  const completedPlanCount = completedPlansForSelectedIdeal.length
+
+  const recentCompletedPlans = completedPlansForSelectedIdeal
+    .slice()
+    .sort((a, b) => {
+      const byDate = b.date.localeCompare(a.date)
+      if (byDate !== 0) {
+        return byDate
+      }
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+    .slice(0, 5)
 
   function closeMaxIdealsModal() {
     setIsMaxIdealsModalOpen(false)
@@ -421,6 +436,27 @@ function HomeScreen({
     setEditingWaypoint(null)
   }
 
+  function openCompletedPlansModal() {
+    setIsCompletedPlansModalOpen(true)
+  }
+
+  function closeCompletedPlansModal() {
+    setIsCompletedPlansModalOpen(false)
+  }
+
+  function handleUncompletePlan(planId: string) {
+    const currentData = loadAppData()
+    const nextData: AppData = {
+      ...currentData,
+      plans: currentData.plans.map((plan) =>
+        plan.id === planId ? { ...plan, status: 'active' } : plan,
+      ),
+    }
+
+    saveAppData(nextData)
+    onAppDataChange(nextData)
+  }
+
   return (
     <div className="home-screen">
       {ideals.length > 0 && selectedIdeal !== null ? (
@@ -540,10 +576,14 @@ function HomeScreen({
                     新しい予定を登録する
                   </button>
 
-                  <p className="completed-plans">
+                  <button
+                    type="button"
+                    className="completed-plans"
+                    onClick={openCompletedPlansModal}
+                  >
                     <img className="completed-plans__icon" src={miniStar} alt="" />
                     完了した予定 {completedPlanCount}件
-                  </p>
+                  </button>
                 </>
               ) : (
                 <div className="road-card__achieved" aria-label="達成済み">
@@ -632,6 +672,65 @@ function HomeScreen({
           予定の見直し
         </button>
       </nav>
+
+      {isCompletedPlansModalOpen && (
+        <div className="waypoint-modal">
+          <button
+            type="button"
+            className="waypoint-modal__backdrop"
+            aria-label="閉じる"
+            onClick={closeCompletedPlansModal}
+          />
+          <div
+            className="waypoint-modal__panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="completed-plans-title"
+          >
+            <div className="waypoint-modal__header waypoint-modal__header--centered">
+              <h2
+                id="completed-plans-title"
+                className="waypoint-modal__title waypoint-modal__title--center"
+              >
+                今後の予定に戻す
+              </h2>
+              <button
+                type="button"
+                className="waypoint-modal__close"
+                aria-label="閉じる"
+                onClick={closeCompletedPlansModal}
+              >
+                ×
+              </button>
+            </div>
+
+            {recentCompletedPlans.length === 0 ? (
+              <p className="completed-plans-modal__empty">
+                現在、完了した予定はありません。
+              </p>
+            ) : (
+              <ul className="completed-plans-modal__list">
+                {recentCompletedPlans.map((plan) => (
+                  <li key={plan.id}>
+                    <button
+                      type="button"
+                      className="completed-plans-modal__item"
+                      onClick={() => handleUncompletePlan(plan.id)}
+                    >
+                      <span className="completed-plans-modal__item-title">
+                        {plan.title}
+                      </span>
+                      <span className="completed-plans-modal__item-date">
+                        {formatAchievedDateLabel(plan.date)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {isMaxIdealsModalOpen && (
         <div className="waypoint-modal">
